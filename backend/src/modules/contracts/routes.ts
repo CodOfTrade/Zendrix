@@ -8,40 +8,39 @@ export function registerContractRoutes(app: FastifyInstance) {
 
   app.post('/contracts', { onRequest: [app.verifyAuth] }, async (req) => {
     const body = req.body as any;
-    return prisma.contract.create({
-      data: {
-        clientId: body.clientId,
-        name: body.name,
-        type: body.type,
-        status: body.status || 'active',
-        startDate: body.startDate,
-        endDate: body.endDate,
-        reajusteBase: body.reajusteBase,
-        hourlyRate: body.hourlyRate,
-        managedLimit: body.managedLimit ?? 0,
-        allowExceed: body.allowExceed ?? false,
-        externalSource: body.externalSource,
-        externalId: body.externalId,
-        sla: body.sla
-          ? {
-              create: {
-                firstResponseMins: body.sla.firstResponseMins,
-                resolutionMins: body.sla.resolutionMins,
-                pausesByStageIds: body.sla.pausesByStageIds || [],
-                businessHoursStart: body.sla.businessHoursStart || 8,
-                businessHoursEnd: body.sla.businessHoursEnd || 18,
-                holidays: body.sla.holidays || []
-              }
+    const data: any = {
+      clientId: String(body.clientId),
+      name: body.name,
+      type: body.type,
+      status: body.status || 'active',
+      startDate: body.startDate,
+      endDate: body.endDate,
+      reajusteBase: body.reajusteBase,
+      hourlyRate: body.hourlyRate,
+      managedLimit: body.managedLimit ?? 0,
+      allowExceed: body.allowExceed ?? false,
+      externalSource: body.externalSource,
+      externalId: body.externalId,
+      sla: body.sla
+        ? {
+            create: {
+              firstResponseMins: body.sla.firstResponseMins,
+              resolutionMins: body.sla.resolutionMins,
+              pausesByStageIds: body.sla.pausesByStageIds || [],
+              businessHoursStart: body.sla.businessHoursStart || 8,
+              businessHoursEnd: body.sla.businessHoursEnd || 18,
+              holidays: body.sla.holidays || []
             }
-          : undefined,
-        limits: {
-          create: {
-            managedTotal: body.managedLimit ?? 0,
-            allowExceed: body.allowExceed ?? false
           }
+        : undefined,
+      limits: {
+        create: {
+          managedTotal: body.managedLimit ?? 0,
+          allowExceed: body.allowExceed ?? false
         }
       }
-    });
+    };
+    return prisma.contract.create({ data });
   });
 
   app.put('/contracts/:id', { onRequest: [app.verifyAuth] }, async (req, reply) => {

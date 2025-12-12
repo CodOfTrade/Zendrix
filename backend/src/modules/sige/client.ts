@@ -1,5 +1,6 @@
 import prisma from '../../prisma.js';
 import { config } from '../../config.js';
+import { Prisma } from '@prisma/client';
 
 export interface SigeOrderPayload {
   clientExternalId: string;
@@ -25,7 +26,7 @@ export async function createSigeOrder(ticketId: string, payload: SigeOrderPayloa
     await prisma.sigeLog.create({
       data: {
         ticketId,
-        payload,
+        payload: payload as Prisma.InputJsonValue,
         response: { externalId },
         status: 'mock'
       }
@@ -75,8 +76,8 @@ export async function createSigeOrder(ticketId: string, payload: SigeOrderPayloa
   await prisma.sigeLog.create({
     data: {
       ticketId,
-      payload,
-      response: responseJson,
+      payload: payload as Prisma.InputJsonValue,
+      response: responseJson as Prisma.InputJsonValue,
       status: success ? 'created' : 'error'
     }
   });

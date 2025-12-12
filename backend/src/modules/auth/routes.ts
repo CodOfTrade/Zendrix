@@ -27,7 +27,7 @@ export function registerAuthRoutes(app: FastifyInstance) {
   app.post('/auth/refresh', async (req, reply) => {
     const body = req.body as { refreshToken: string };
     try {
-      const decoded = (app.jwt.verify as any)(body.refreshToken, { secret: config.jwtRefreshSecret }) as any;
+      const decoded = (app.jwt as any).verify(body.refreshToken, { secret: config.jwtRefreshSecret }) as any;
       const tokens = signTokens(app, decoded);
       return reply.send({ user: decoded, ...tokens });
     } catch {

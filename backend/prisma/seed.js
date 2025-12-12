@@ -1,11 +1,15 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { config } from '../src/config.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const pepper = process.env.PEPPER || 'pepper';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await bcrypt.hash('Admin!123' + config.pepper, 10);
+  const passwordHash = await bcrypt.hash('Admin!123' + pepper, 10);
   const adminRole = await prisma.role.upsert({
     where: { key: 'admin' },
     update: {},
@@ -60,7 +64,7 @@ async function main() {
       name: 'Contato Demo',
       email: 'contato@cliente.demo',
       portalAccess: true,
-      passwordHash: await bcrypt.hash('Portal!123' + config.pepper, 10)
+      passwordHash: await bcrypt.hash('Portal!123' + pepper, 10)
     }
   });
 
