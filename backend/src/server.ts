@@ -33,6 +33,7 @@ export const buildServer = () => {
   app.decorate('verifyAuth', authHook);
 
   app.get('/healthz', async () => ({ status: 'ok' }));
+  app.get('/api/healthz', async () => ({ status: 'ok' }));
   app.get('/readyz', async () => ({ status: 'ready' }));
 
   app.register(async (api) => {
