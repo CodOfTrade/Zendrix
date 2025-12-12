@@ -32,9 +32,12 @@ export const buildServer = () => {
 
   app.decorate('verifyAuth', authHook);
 
-  app.get('/healthz', async () => ({ status: 'ok' }));
-  app.get('/api/healthz', async () => ({ status: 'ok' }));
-  app.get('/readyz', async () => ({ status: 'ready' }));
+  const health = async () => ({ status: 'ok' });
+  const ready = async () => ({ status: 'ready' });
+  app.get('/healthz', health);
+  app.get('/readyz', ready);
+  app.get('/api/healthz', health);
+  app.get('/api/readyz', ready);
 
   app.register(async (api) => {
     registerAuthRoutes(api);
@@ -47,6 +50,8 @@ export const buildServer = () => {
     registerNotificationRoutes(api);
     registerSigeRoutes(api);
     registerPortalRoutes(api);
+    api.get('/healthz', health);
+    api.get('/readyz', ready);
   }, { prefix: '/api' });
 
   return app;
