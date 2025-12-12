@@ -19,8 +19,8 @@ export async function validateUser(email: string, password: string): Promise<Aut
   if (!ok) return null;
 
   const permissions = new Set<string>();
-  user.roles.forEach((ur) =>
-    ur.role.rolePermissions.forEach((rp) => {
+  user.roles.forEach((ur: any) =>
+    ur.role.rolePermissions.forEach((rp: any) => {
       permissions.add(rp.permission.key);
     })
   );
@@ -29,7 +29,7 @@ export async function validateUser(email: string, password: string): Promise<Aut
     id: user.id,
     email: user.email,
     name: user.name,
-    roles: user.roles.map((r) => r.role.name),
+    roles: user.roles.map((r: any) => r.role.name),
     permissions: Array.from(permissions)
   };
 }

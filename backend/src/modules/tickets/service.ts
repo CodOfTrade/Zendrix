@@ -95,7 +95,7 @@ async function calculateBilling(ticketId: string) {
     include: { timeEntries: true, service: true, contract: true }
   });
   if (!ticket) throw new Error('Ticket not found');
-  const totalMinutes = ticket.timeEntries.reduce((acc, t) => acc + t.minutes, 0);
+  const totalMinutes = ticket.timeEntries.reduce((acc: number, t: any) => acc + t.minutes, 0);
   const hours = totalMinutes / 60;
   let noCost = false;
   let billableAmount = 0;

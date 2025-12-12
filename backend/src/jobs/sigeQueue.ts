@@ -17,7 +17,7 @@ export async function processSigeQueue() {
         }
       });
       if (!ticket) continue;
-      const totalMinutes = ticket.timeEntries.reduce((acc, te) => acc + te.minutes, 0);
+      const totalMinutes = ticket.timeEntries.reduce((acc: number, te: any) => acc + te.minutes, 0);
       const payload = {
         clientExternalId: ticket.client.externalId || ticket.clientId,
         contactExternalId: ticket.contact?.externalId,

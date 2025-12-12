@@ -52,7 +52,7 @@ async function main() {
     }
   });
 
-  const contact = await prisma.contact.upsert({
+  await prisma.contact.upsert({
     where: { email: 'contato@cliente.demo' },
     update: {},
     create: {
@@ -73,28 +73,26 @@ async function main() {
     }
   });
 
-  const stages = await prisma.$transaction([
-    prisma.stage.upsert({
-      where: { id: 'stage-triagem' },
-      update: {},
-      create: { id: 'stage-triagem', serviceDeskId: desk.id, name: 'Triagem', order: 1, pauseSla: false }
-    }),
-    prisma.stage.upsert({
-      where: { id: 'stage-andamento' },
-      update: {},
-      create: { id: 'stage-andamento', serviceDeskId: desk.id, name: 'Em andamento', order: 2, pauseSla: false }
-    }),
-    prisma.stage.upsert({
-      where: { id: 'stage-aguardando' },
-      update: {},
-      create: { id: 'stage-aguardando', serviceDeskId: desk.id, name: 'Aguardando cliente', order: 3, pauseSla: true }
-    }),
-    prisma.stage.upsert({
-      where: { id: 'stage-fechado' },
-      update: {},
-      create: { id: 'stage-fechado', serviceDeskId: desk.id, name: 'Fechado', order: 4, pauseSla: false }
-    })
-  ]);
+  const stageTriagem = await prisma.stage.upsert({
+    where: { id: 'stage-triagem' },
+    update: {},
+    create: { id: 'stage-triagem', serviceDeskId: desk.id, name: 'Triagem', order: 1, pauseSla: false }
+  });
+  const stageAndamento = await prisma.stage.upsert({
+    where: { id: 'stage-andamento' },
+    update: {},
+    create: { id: 'stage-andamento', serviceDeskId: desk.id, name: 'Em andamento', order: 2, pauseSla: false }
+  });
+  const stageAguardando = await prisma.stage.upsert({
+    where: { id: 'stage-aguardando' },
+    update: {},
+    create: { id: 'stage-aguardando', serviceDeskId: desk.id, name: 'Aguardando cliente', order: 3, pauseSla: true }
+  });
+  await prisma.stage.upsert({
+    where: { id: 'stage-fechado' },
+    update: {},
+    create: { id: 'stage-fechado', serviceDeskId: desk.id, name: 'Fechado', order: 4, pauseSla: false }
+  });
 
   const priority = await prisma.priority.upsert({
     where: { id: 'priority-normal' },
@@ -119,7 +117,7 @@ async function main() {
     data: {
       firstResponseMins: 60,
       resolutionMins: 480,
-      pausesByStageIds: [stages[2].id],
+      pausesByStageIds: [stageAguardando.id],
       businessHoursStart: 8,
       businessHoursEnd: 18
     }
