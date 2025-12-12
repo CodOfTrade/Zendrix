@@ -1,4 +1,4 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyRequest, FastifyReply, onRequestHookHandler } from 'fastify';
 import { AuthUser } from './types.js';
 
 declare module '@fastify/jwt' {
@@ -9,18 +9,18 @@ declare module '@fastify/jwt' {
 
 declare module 'fastify' {
   interface FastifyInstance {
-    verifyAuth(request: FastifyRequest, reply: FastifyReply): Promise<void>;
+    verifyAuth: onRequestHookHandler;
   }
   interface FastifyRequest {
     user?: AuthUser;
   }
 }
 
-export async function authHook(request: FastifyRequest, reply: FastifyReply) {
+export const authHook: onRequestHookHandler = async (request: FastifyRequest, reply: FastifyReply) => {
   try {
     const decoded = await request.jwtVerify<AuthUser>();
     request.user = decoded;
   } catch (err) {
     return reply.unauthorized();
   }
-}
+};

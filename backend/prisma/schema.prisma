@@ -22,6 +22,12 @@ model User {
   preferences   NotificationPreference?
   auditLogs     AuditLog[]
   passwordReset PasswordResetToken?
+  assignedTickets Ticket[]           @relation("TicketAssignee")
+  ticketComments  TicketComment[]    @relation("TicketCommentAuthor")
+  ticketFollowers TicketFollower[]   @relation("TicketFollowerUser")
+  timeEntries     TicketTimeEntry[]  @relation("TicketTimeUser")
+  appointmentsCreated Appointment[]  @relation("UserAppointmentsCreated")
+  appointmentParticipants AppointmentParticipant[] @relation("AppointmentParticipantUser")
 }
 
 model Role {
@@ -63,6 +69,7 @@ model ServiceGroup {
   id    String @id @default(uuid())
   name  String
   users UserServiceGroup[]
+  tickets Ticket[] @relation("TicketServiceGroup")
 }
 
 model UserServiceGroup {
@@ -88,6 +95,7 @@ model Client {
   contracts      Contract[]
   tickets        Ticket[]
   assets         Asset[]
+  appointments   Appointment[] @relation("ClientAppointments")
 }
 
 model Contact {
@@ -104,6 +112,7 @@ model Contact {
   updatedAt      DateTime  @updatedAt
   client         Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   tickets        Ticket[]
+  appointmentParticipants AppointmentParticipant[] @relation("AppointmentParticipantContact")
 }
 
 model Contract {
@@ -138,6 +147,7 @@ model ContractSLA {
   businessHoursStart Int      @default(8) // 8h
   businessHoursEnd   Int      @default(18)
   holidays           DateTime[]
+  contracts          Contract[]
 }
 
 model ContractLimit {
@@ -237,13 +247,14 @@ model Ticket {
   stage           Stage            @relation(fields: [stageId], references: [id])
   priority        Priority         @relation(fields: [priorityId], references: [id])
   service         ServiceCatalog?  @relation(fields: [serviceId], references: [id])
-  assignee        User?            @relation(fields: [assigneeId], references: [id])
-  serviceGroup    ServiceGroup?    @relation(fields: [serviceGroupId], references: [id])
+  assignee        User?            @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  serviceGroup    ServiceGroup?    @relation("TicketServiceGroup", fields: [serviceGroupId], references: [id])
   parent          Ticket?          @relation("TicketToTicket", fields: [parentId], references: [id])
   children        Ticket[]         @relation("TicketToTicket")
   comments        TicketComment[]
   followers       TicketFollower[]
-  relations       TicketRelation[]
+  relationsBase   TicketRelation[] @relation("TicketRelationsBase")
+  relationsRelated TicketRelation[] @relation("TicketRelationsRelated")
   checklistItems  TicketChecklistItem[]
   timeEntries     TicketTimeEntry[]
   attachments     TicketAttachment[]
@@ -251,6 +262,8 @@ model Ticket {
   slaState        TicketSLAState?
   csat            CSATRating?
   appointments    Appointment[]
+  sigeLogs        SigeLog[]        @relation("SigeLogTicket")
+  sigeQueue       SigeQueue?       @relation("TicketSigeQueue")
 }
 
 model TicketComment {
@@ -261,7 +274,7 @@ model TicketComment {
   message    String
   createdAt  DateTime  @default(now())
   ticket     Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  author     User?     @relation(fields: [authorId], references: [id])
+  author     User?     @relation("TicketCommentAuthor", fields: [authorId], references: [id])
 }
 
 model TicketFollower {
@@ -269,7 +282,7 @@ model TicketFollower {
   ticketId String
   userId   String
   ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User   @relation("TicketFollowerUser", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([ticketId, userId])
 }
@@ -301,7 +314,7 @@ model TicketTimeEntry {
   notes      String?
   createdAt  DateTime  @default(now())
   ticket     Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  user       User?     @relation(fields: [userId], references: [id])
+  user       User?     @relation("TicketTimeUser", fields: [userId], references: [id])
 }
 
 model TicketAttachment {
@@ -407,8 +420,8 @@ model Appointment {
   reminderMins Int?
   createdAt    DateTime    @default(now())
   ticket       Ticket?     @relation(fields: [ticketId], references: [id])
-  client       Client?     @relation(fields: [clientId], references: [id])
-  createdBy    User?       @relation(fields: [createdById], references: [id])
+  client       Client?     @relation("ClientAppointments", fields: [clientId], references: [id])
+  createdBy    User?       @relation("UserAppointmentsCreated", fields: [createdById], references: [id])
   participants AppointmentParticipant[]
 }
 
@@ -418,8 +431,8 @@ model AppointmentParticipant {
   userId        String?
   contactId     String?
   appointment   Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  user          User?        @relation(fields: [userId], references: [id])
-  contact       Contact?     @relation(fields: [contactId], references: [id])
+  user          User?        @relation("AppointmentParticipantUser", fields: [userId], references: [id])
+  contact       Contact?     @relation("AppointmentParticipantContact", fields: [contactId], references: [id])
 }
 
 model SigeConfig {
@@ -441,7 +454,7 @@ model SigeLog {
   response   Json?
   status     String
   createdAt  DateTime @default(now())
-  ticket     Ticket?  @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  ticket     Ticket?  @relation("SigeLogTicket", fields: [ticketId], references: [id], onDelete: SetNull)
 }
 
 model SigeQueue {
@@ -452,7 +465,7 @@ model SigeQueue {
   lastError   String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticket      Ticket    @relation("TicketSigeQueue", fields: [ticketId], references: [id], onDelete: Cascade)
 }
 
 model JobQueue {
