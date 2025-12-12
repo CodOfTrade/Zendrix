@@ -47,10 +47,12 @@ async function main() {
     }
   });
 
+  const clientId = 'client-demo';
   const client = await prisma.client.upsert({
-    where: { name: 'Cliente Demo' },
+    where: { id: clientId },
     update: {},
     create: {
+      id: clientId,
       name: 'Cliente Demo',
       tags: ['demo']
     }
