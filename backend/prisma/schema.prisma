@@ -1,0 +1,510 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String               @id @default(uuid())
+  email         String               @unique
+  name          String
+  passwordHash  String
+  totpEnabled   Boolean              @default(false)
+  totpSecret    String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  roles         UserRole[]
+  serviceGroups UserServiceGroup[]
+  notifications Notification[]
+  preferences   NotificationPreference?
+  auditLogs     AuditLog[]
+  passwordReset PasswordResetToken?
+}
+
+model Role {
+  id              String            @id @default(uuid())
+  key             String            @unique
+  name            String
+  rolePermissions RolePermission[]
+  users           UserRole[]
+}
+
+model Permission {
+  id    String @id @default(uuid())
+  key   String @unique
+  label String
+  roles RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+}
+
+model ServiceGroup {
+  id    String @id @default(uuid())
+  name  String
+  users UserServiceGroup[]
+}
+
+model UserServiceGroup {
+  id             String        @id @default(uuid())
+  userId         String
+  serviceGroupId String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceGroup   ServiceGroup  @relation(fields: [serviceGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serviceGroupId])
+}
+
+model Client {
+  id             String     @id @default(uuid())
+  name           String
+  document       String?
+  tags           String[]
+  externalSource String?
+  externalId     String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  contacts       Contact[]
+  contracts      Contract[]
+  tickets        Ticket[]
+  assets         Asset[]
+}
+
+model Contact {
+  id             String    @id @default(uuid())
+  clientId       String
+  name           String
+  email          String?
+  phone          String?
+  portalAccess   Boolean   @default(false)
+  passwordHash   String?
+  externalSource String?
+  externalId     String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  client         Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tickets        Ticket[]
+}
+
+model Contract {
+  id             String           @id @default(uuid())
+  clientId       String
+  name           String
+  type           ContractType
+  status         ContractStatus   @default(active)
+  startDate      DateTime?
+  endDate        DateTime?
+  reajusteBase   DateTime?
+  hourlyRate     Decimal?         @db.Decimal(10, 2)
+  managedLimit   Int              @default(0)
+  allowExceed    Boolean          @default(false)
+  slaId          String?
+  externalSource String?
+  externalId     String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  client         Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sla            ContractSLA?     @relation(fields: [slaId], references: [id])
+  limits         ContractLimit?
+  tickets        Ticket[]
+  assets         Asset[]
+}
+
+model ContractSLA {
+  id                 String   @id @default(uuid())
+  firstResponseMins  Int
+  resolutionMins     Int
+  pausesByStageIds   String[]
+  businessHoursStart Int      @default(8) // 8h
+  businessHoursEnd   Int      @default(18)
+  holidays           DateTime[]
+}
+
+model ContractLimit {
+  id           String   @id @default(uuid())
+  contractId   String   @unique
+  managedTotal Int
+  allowExceed  Boolean  @default(false)
+  contract     Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+}
+
+model ServiceDesk {
+  id            String          @id @default(uuid())
+  name          String
+  description   String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  stages        Stage[]
+  priorities    Priority[]
+  services      ServiceCatalog[]
+  tickets       Ticket[]
+  customFields  DeskCustomField[]
+  automations   Automation[]
+}
+
+model Stage {
+  id            String     @id @default(uuid())
+  serviceDeskId String
+  name          String
+  order         Int
+  pauseSla      Boolean    @default(false)
+  serviceDesk   ServiceDesk @relation(fields: [serviceDeskId], references: [id], onDelete: Cascade)
+  tickets       Ticket[]
+}
+
+model Priority {
+  id            String     @id @default(uuid())
+  serviceDeskId String
+  name          String
+  color         String
+  order         Int
+  slaMinutes    Int?
+  serviceDesk   ServiceDesk @relation(fields: [serviceDeskId], references: [id], onDelete: Cascade)
+  tickets       Ticket[]
+}
+
+model ServiceCatalog {
+  id            String     @id @default(uuid())
+  serviceDeskId String
+  name          String
+  description   String?
+  hourlyRate    Decimal?   @db.Decimal(10, 2)
+  slaMinutes    Int?
+  serviceDesk   ServiceDesk @relation(fields: [serviceDeskId], references: [id], onDelete: Cascade)
+  tickets       Ticket[]
+}
+
+model DeskCustomField {
+  id            String       @id @default(uuid())
+  serviceDeskId String
+  key           String
+  label         String
+  type          String
+  required      Boolean      @default(false)
+  serviceDesk   ServiceDesk  @relation(fields: [serviceDeskId], references: [id], onDelete: Cascade)
+}
+
+model Ticket {
+  id              String           @id @default(uuid())
+  number          Int              @default(autoincrement())
+  title           String
+  description     String
+  clientId        String
+  contactId       String?
+  contractId      String?
+  serviceDeskId   String
+  stageId         String
+  priorityId      String
+  serviceId       String?
+  assigneeId      String?
+  serviceGroupId  String?
+  parentId        String?
+  status          TicketStatus     @default(open)
+  billableAmount  Decimal          @db.Decimal(10, 2) @default(0)
+  noCost          Boolean          @default(false)
+  billingNotes    String?
+  sigeStatus      String?          // created/error/pending
+  sigeOrderId     String?
+  sigeMode        String?          // strict/flexible
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  closedAt        DateTime?
+  dueAt           DateTime?
+  client          Client           @relation(fields: [clientId], references: [id])
+  contact         Contact?         @relation(fields: [contactId], references: [id])
+  contract        Contract?        @relation(fields: [contractId], references: [id])
+  serviceDesk     ServiceDesk      @relation(fields: [serviceDeskId], references: [id])
+  stage           Stage            @relation(fields: [stageId], references: [id])
+  priority        Priority         @relation(fields: [priorityId], references: [id])
+  service         ServiceCatalog?  @relation(fields: [serviceId], references: [id])
+  assignee        User?            @relation(fields: [assigneeId], references: [id])
+  serviceGroup    ServiceGroup?    @relation(fields: [serviceGroupId], references: [id])
+  parent          Ticket?          @relation("TicketToTicket", fields: [parentId], references: [id])
+  children        Ticket[]         @relation("TicketToTicket")
+  comments        TicketComment[]
+  followers       TicketFollower[]
+  relations       TicketRelation[]
+  checklistItems  TicketChecklistItem[]
+  timeEntries     TicketTimeEntry[]
+  attachments     TicketAttachment[]
+  history         TicketHistory[]
+  slaState        TicketSLAState?
+  csat            CSATRating?
+  appointments    Appointment[]
+}
+
+model TicketComment {
+  id         String    @id @default(uuid())
+  ticketId   String
+  authorId   String?
+  isPublic   Boolean   @default(true)
+  message    String
+  createdAt  DateTime  @default(now())
+  ticket     Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  author     User?     @relation(fields: [authorId], references: [id])
+}
+
+model TicketFollower {
+  id       String @id @default(uuid())
+  ticketId String
+  userId   String
+  ticket   Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, userId])
+}
+
+model TicketRelation {
+  id          String       @id @default(uuid())
+  ticketId    String
+  relatedId   String
+  relation    RelationType
+  ticket      Ticket       @relation("TicketRelationsBase", fields: [ticketId], references: [id], onDelete: Cascade)
+  related     Ticket       @relation("TicketRelationsRelated", fields: [relatedId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, relatedId, relation])
+}
+
+model TicketChecklistItem {
+  id         String    @id @default(uuid())
+  ticketId   String
+  label      String
+  completed  Boolean   @default(false)
+  ticket     Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model TicketTimeEntry {
+  id         String    @id @default(uuid())
+  ticketId   String
+  userId     String?
+  minutes    Int
+  notes      String?
+  createdAt  DateTime  @default(now())
+  ticket     Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user       User?     @relation(fields: [userId], references: [id])
+}
+
+model TicketAttachment {
+  id         String    @id @default(uuid())
+  ticketId   String
+  filename   String
+  path       String
+  mimeType   String
+  isPublic   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  ticket     Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model TicketHistory {
+  id         String    @id @default(uuid())
+  ticketId   String
+  action     String
+  metadata   Json
+  createdAt  DateTime  @default(now())
+  ticket     Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model TicketSLAState {
+  id                   String   @id @default(uuid())
+  ticketId             String   @unique
+  firstResponseDueAt   DateTime?
+  resolutionDueAt      DateTime?
+  firstRespondedAt     DateTime?
+  resolvedAt           DateTime?
+  pausedAt             DateTime?
+  totalPausedMinutes   Int      @default(0)
+  ticket               Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model CSATRating {
+  id         String   @id @default(uuid())
+  ticketId   String   @unique
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model Automation {
+  id            String       @id @default(uuid())
+  serviceDeskId String?
+  name          String
+  active        Boolean      @default(true)
+  trigger       Json
+  actions       Json
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  serviceDesk   ServiceDesk? @relation(fields: [serviceDeskId], references: [id])
+}
+
+model Notification {
+  id         String    @id @default(uuid())
+  userId     String
+  title      String
+  body       String
+  read       Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NotificationPreference {
+  id            String  @id @default(uuid())
+  userId        String  @unique
+  emailEnabled  Boolean @default(true)
+  inAppEnabled  Boolean @default(true)
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Asset {
+  id           String    @id @default(uuid())
+  clientId     String
+  contractId   String?
+  type         String
+  manufacturer String?
+  model        String?
+  serial       String?
+  serviceTag   String
+  managed      Boolean   @default(false)
+  location     String?
+  status       String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  contract     Contract? @relation(fields: [contractId], references: [id])
+}
+
+model Appointment {
+  id           String     @id @default(uuid())
+  title        String
+  description  String?
+  startAt      DateTime
+  endAt        DateTime
+  recurrence   String?
+  ticketId     String?
+  clientId     String?
+  createdById  String?
+  reminderMins Int?
+  createdAt    DateTime    @default(now())
+  ticket       Ticket?     @relation(fields: [ticketId], references: [id])
+  client       Client?     @relation(fields: [clientId], references: [id])
+  createdBy    User?       @relation(fields: [createdById], references: [id])
+  participants AppointmentParticipant[]
+}
+
+model AppointmentParticipant {
+  id            String       @id @default(uuid())
+  appointmentId String
+  userId        String?
+  contactId     String?
+  appointment   Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  user          User?        @relation(fields: [userId], references: [id])
+  contact       Contact?     @relation(fields: [contactId], references: [id])
+}
+
+model SigeConfig {
+  id               String   @id @default(uuid())
+  mode             String   @default("sandbox")
+  baseUrl          String
+  token            String
+  osEndpoint       String
+  osFlagField      String
+  retryCount       Int      @default(3)
+  timeoutMs        Int      @default(10000)
+  createdAt        DateTime @default(now())
+}
+
+model SigeLog {
+  id         String   @id @default(uuid())
+  ticketId   String?
+  payload    Json
+  response   Json?
+  status     String
+  createdAt  DateTime @default(now())
+  ticket     Ticket?  @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+}
+
+model SigeQueue {
+  id          String    @id @default(uuid())
+  ticketId    String    @unique
+  status      String    @default("pending")
+  attempts    Int       @default(0)
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+}
+
+model JobQueue {
+  id         String   @id @default(uuid())
+  type       String
+  payload    Json
+  status     String   @default("pending")
+  attempts   Int      @default(0)
+  nextRunAt  DateTime @default(now())
+  createdAt  DateTime @default(now())
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  token     String   @unique
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  metadata  Json
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  paused
+  closed
+}
+
+enum ContractStatus {
+  active
+  inactive
+  pending_reajuste
+  closed
+}
+
+enum ContractType {
+  fixed
+  bank_hours
+  franchise
+}
+
+enum RelationType {
+  parent
+  child
+  related
+  duplicate
+}
