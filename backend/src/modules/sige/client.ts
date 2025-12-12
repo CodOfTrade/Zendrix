@@ -26,8 +26,8 @@ export async function createSigeOrder(ticketId: string, payload: SigeOrderPayloa
     await prisma.sigeLog.create({
       data: {
         ticketId,
-        payload: payload as Prisma.InputJsonValue,
-        response: { externalId },
+        payload: payload as unknown as Prisma.InputJsonValue,
+        response: { externalId } as unknown as Prisma.InputJsonValue,
         status: 'mock'
       }
     });
@@ -76,8 +76,8 @@ export async function createSigeOrder(ticketId: string, payload: SigeOrderPayloa
   await prisma.sigeLog.create({
     data: {
       ticketId,
-      payload: payload as Prisma.InputJsonValue,
-      response: responseJson as Prisma.InputJsonValue,
+      payload: payload as unknown as Prisma.InputJsonValue,
+      response: responseJson as unknown as Prisma.InputJsonValue,
       status: success ? 'created' : 'error'
     }
   });

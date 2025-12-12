@@ -12,7 +12,7 @@ declare module 'fastify' {
     verifyAuth: onRequestHookHandler;
   }
   interface FastifyRequest {
-    user?: AuthUser;
+    user: AuthUser;
   }
 }
 
